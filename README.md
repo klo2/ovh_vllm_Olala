@@ -50,6 +50,27 @@ docker run --rm --gpus all --ipc=host -p 8000:8000 \
 The TPA-factor decode and Mamba-3 step CUDA extensions are JIT-built (nvcc, sm_90) on first use;
 the `olala-jit` volume keeps them across container restarts.
 
+#### Build arm64/aarch64 (GH200, GB200/GB300, DGX Spark / GB10)
+
+`BUILD_BASE_IMAGE` has an x86_64-only default (`pytorch/manylinux2_28-builder`). On an arm64 host
+it must be replaced by the aarch64 builder, sinon le stage `base` échoue en `exec format error` :
+
+```bash
+DOCKER_BUILDKIT=1 docker build -f docker/Dockerfile --target vllm-openai \
+  --platform linux/arm64 \
+  --build-arg BUILD_BASE_IMAGE=pytorch/manylinuxaarch64-builder:cuda13.0-78e737ad29420ffc4800e677c51e2a852caf8359 \
+  --build-arg torch_cuda_arch_list="9.0 10.0 11.0 12.0" \
+  --build-arg max_jobs=16 \
+  --build-arg nvcc_threads=4 \
+  --build-arg VLLM_USE_PRECOMPILED=1 \
+  --build-arg VLLM_MERGE_BASE_COMMIT=4135590ffe0119dab806d78a7eee6dff3be2618e \
+  --build-arg VLLM_VERSION_OVERRIDE=0.33.0 \
+  --build-arg RUN_WHEEL_CHECK=false \
+  -t olala-vllm:dragon-v0.33 .
+```
+
+DGX Spark / GB10 is sm_121, family-covered by `12.0` under CUDA 13.
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/vllm-project/vllm/main/docs/assets/logos/vllm-logo-text-dark.png">
